@@ -78,7 +78,7 @@ class CloudStackOps(CloudStackOpsBase):
         self.pp = pprint.PrettyPrinter(depth=6)
         self.ssh = None
         self.xenserver = None
-
+        self.kvm = None
         self.printWelcome()
         self.checkScreenAlike()
 
@@ -318,6 +318,9 @@ class CloudStackOps(CloudStackOpsBase):
             apicall = listPods.listPodsCmd()
         elif csApiCall == "listZones":
             apicall = listZones.listZonesCmd()
+        elif csApiCall == "listTemplates":
+            apicall = listTemplates.listTemplatesCmd()
+            apicall.templatefilter = "all"
         else:
             print "No API command to call"
             sys.exit(1)
@@ -438,6 +441,26 @@ class CloudStackOps(CloudStackOpsBase):
 
         # Call CloudStack API
         return self._callAPI(apicall)
+
+    # Get host data
+    def getFirstHostFromCluster(self, clusterID):
+
+        hosts_list = self.getHostsFromCluster(clusterID)
+        cluster_data = self.listClusters({'clusterid': clusterID})
+
+        if cluster_data[0].name.endswith("cs01"):
+            host_to_find = "hv01"
+        elif cluster_data[0].name.endswith("cs02"):
+            host_to_find = "hv07"
+        elif cluster_data[0].name.endswith("cs03"):
+            host_to_find = "hv07"
+        else:
+            return hosts_list[0]
+
+        for h in hosts_list:
+            if host_to_find in h.name:
+                return h
+        return hosts_list[0]
 
     # Find enabled hosts in a given cluster excluding it's hosts which have been marked dedicated
     def getSharedHostsFromCluster(self, clusterID):
@@ -1692,3 +1715,19 @@ class CloudStackOps(CloudStackOpsBase):
 
       # Call CloudStack API
       return self._callAPI(apicall)
+
+    def extract_volume(self, uuid, zoneid):
+        # Export volume
+        apicall = extractVolume.extractVolumeCmd()
+        apicall.id = uuid
+        apicall.mode = "HTTP_DOWNLOAD"
+        apicall.zoneid = zoneid
+
+        result = self._callAPI(apicall)
+
+        if not result:
+            print "Error: Could not export vdi %s" % uuid
+            return False
+        if self.DEBUG == 1:
+            print "DEBUG: received this result:" + str(result)
+        return result.volume.url
