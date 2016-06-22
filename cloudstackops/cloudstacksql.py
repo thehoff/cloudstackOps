@@ -220,3 +220,19 @@ class CloudStackSQL(CloudStackOpsBase):
         cursor.close()
 
         return result
+
+    # get volumes that belong to a given instance ID
+    def get_volumes_for_instance(self, instancename):
+        if not self.conn:
+            return 1
+        if not instanceid:
+            return 1
+
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT volumes.name, volumes.path FROM vm_instance, volumes"
+                       " WHERE volumes.instance_id = vm_instance.id"
+                       " AND instance_name='" + instancename + "';")
+        result = cursor.fetchall()
+        cursor.close()
+
+        return result

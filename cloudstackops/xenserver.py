@@ -24,6 +24,7 @@ import socket
 import sys
 import time
 import os
+import hypervisor
 
 # Fabric
 from fabric.api import *
@@ -46,12 +47,14 @@ output['stdin'] = False
 output['output'] = False
 output['warnings'] = False
 
+
 # Class to handle XenServer patching
-class xenserver():
+class xenserver(hypervisor):
 
     def __init__(self, ssh_user='root', threads=5):
         self.ssh_user = ssh_user
         self.threads = threads
+        self.mountpoint = ""
 
     # Wait for hypervisor to become alive again
     def check_connect(self, host):
@@ -88,18 +91,6 @@ class xenserver():
                     return False
         except:
             return False
-
-    # Check if we are really offline
-    def check_offline(self, host):
-        print "Note: Waiting for " + host.name + " to go offline"
-        while os.system("ping -c 1 " + host.ipaddress + " 2>&1 >/dev/null") == 0:
-            # Progress indication
-            sys.stdout.write(".")
-            sys.stdout.flush()
-            time.sleep(5)
-        # Remove progress indication
-        sys.stdout.write("\033[F")
-        print "Note: Host " + host.name + " is now offline!                           "
 
     # Return host of poolmaster
     def get_poolmaster(self, host):
@@ -304,5 +295,44 @@ class xenserver():
         try:
             with settings(host_string=self.ssh_user + "@" + host.ipaddress):
                 return fab.run("python /tmp/xenserver_check_bonds.py | awk {'print $1'} | tr -d \":\"")
+        except:
+            return False
+
+    # Export a VDI to a given path
+    def export_volume(self, host, vdi_uuid):
+        export_path = self.get_migration_path() + vdi_uuid + ".vhd"
+        print "Note: We're exporting disk with UUID %s to %s" % (vdi_uuid, export_path)
+        try:
+            with settings(host_string=self.ssh_user + "@" + host.ipaddress):
+                command = "xe vdi-export uuid=%s filename=%s format=vhd" % (vdi_uuid, export_path)
+                return fab.run(command)
+        except:
+            return False
+
+    def find_nfs_mountpoint(self, host):
+        print "Note: Looking for NFS mount on XenServer"
+        if self.mountpoint is not None:
+            return self.mountpoint
+        try:
+            with settings(host_string=self.ssh_user + "@" + host.ipaddress):
+                command = "xe pbd-list sr-uuid=$(xe sr-list type=nfs params=uuid --minimal) params=sr-uuid" \
+                          " host-name-label=${HOSTNAME} --minimal"
+                srid = fab.run(command)
+                self.mountpoint = "/var/run/sr-mount/" + srid + "/"
+                print "Note: Found " + str(self.mountpoint)
+                return self.mountpoint
+        except:
+            return False
+
+    def get_migration_path(self):
+        return self.mountpoint + "migration/"
+
+    def create_migration_nfs_dir(self, host):
+        self.find_nfs_mountpoint(host)
+        print "Note: Looking for migration folder"
+        try:
+            with settings(host_string=self.ssh_user + "@" + host.ipaddress):
+                command = "mkdir -p " + self.mountpoint
+                return fab.run(command)
         except:
             return False
