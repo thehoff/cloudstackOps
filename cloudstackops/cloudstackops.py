@@ -78,7 +78,7 @@ class CloudStackOps(CloudStackOpsBase):
         self.pp = pprint.PrettyPrinter(depth=6)
         self.ssh = None
         self.xenserver = None
-
+        self.kvm = None
         self.printWelcome()
         self.checkScreenAlike()
 
@@ -1692,3 +1692,19 @@ class CloudStackOps(CloudStackOpsBase):
 
       # Call CloudStack API
       return self._callAPI(apicall)
+
+    def extract_volume(self, uuid, zoneid):
+        # Export volume
+        apicall = extractVolume.extractVolumeCmd()
+        apicall.id = uuid
+        apicall.mode = "HTTP_DOWNLOAD"
+        apicall.zoneid = zoneid
+
+        result = self._callAPI(apicall)
+
+        if not result:
+            print "Error: Could not export vdi %s" % uuid
+            return False
+        if self.DEBUG == 1:
+            print "DEBUG: received this result:" + str(result)
+        return result.volume.url

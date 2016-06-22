@@ -25,6 +25,7 @@ import sys
 import time
 import os
 import requests
+import hypervisor
 
 # Fabric
 from fabric.api import *
@@ -47,15 +48,18 @@ output['stdin'] = False
 output['output'] = False
 output['warnings'] = False
 
+
 # Class to handle XenServer patching
-class xenserver():
+class xenserver(hypervisor.hypervisor):
 
     def __init__(self, ssh_user='root', threads=5, pre_empty_script='xenserver_pre_empty_script.sh',
                  post_empty_script='xenserver_post_empty_script.sh'):
+        hypervisor.__init__(ssh_user, threads)
         self.ssh_user = ssh_user
         self.threads = threads
         self.pre_empty_script = pre_empty_script
         self.post_empty_script = post_empty_script
+        self.mountpoint = None
 
     # Wait for hypervisor to become alive again
     def check_connect(self, host):
@@ -93,18 +97,6 @@ class xenserver():
                     return False
         except:
             return False
-
-    # Check if we are really offline
-    def check_offline(self, host):
-        print "Note: Waiting for " + host.name + " to go offline"
-        while os.system("ping -c 1 " + host.ipaddress + " 2>&1 >/dev/null") == 0:
-            # Progress indication
-            sys.stdout.write(".")
-            sys.stdout.flush()
-            time.sleep(5)
-        # Remove progress indication
-        sys.stdout.write("\033[F")
-        print "Note: Host " + host.name + " is now offline!                           "
 
     # Return host of poolmaster
     def get_poolmaster(self, host):
