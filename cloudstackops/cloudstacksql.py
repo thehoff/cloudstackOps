@@ -240,9 +240,9 @@ class CloudStackSQL(CloudStackOpsBase):
     # Return new template id
     def get_template_id_from_name(self, template_name):
         if not self.conn:
-            return 1
+            return False
         if not template_name:
-            return 1
+            return False
 
         cursor = self.conn.cursor()
         cursor.execute("SELECT id FROM vm_template WHERE name = '" + template_name + "' AND removed is NULL LIMIT 1;")
@@ -254,9 +254,9 @@ class CloudStackSQL(CloudStackOpsBase):
     # Return guest_os id
     def get_guest_os_id_from_name(self, guest_os_name):
         if not self.conn:
-            return 1
+            return False
         if not guest_os_name:
-            return 1
+            return False
 
         cursor = self.conn.cursor()
         cursor.execute("SELECT id from guest_os WHERE display_name ='"
@@ -269,9 +269,9 @@ class CloudStackSQL(CloudStackOpsBase):
     # Return storage_pool id
     def get_storage_pool_id_from_name(self, storage_pool_name):
         if not self.conn:
-            return 1
+            return False
         if not storage_pool_name:
-            return 1
+            return False
 
         cursor = self.conn.cursor()
         cursor.execute("SELECT storage_pool.id FROM cluster, storage_pool WHERE storage_pool.cluster_id = cluster.id "
@@ -284,9 +284,9 @@ class CloudStackSQL(CloudStackOpsBase):
     # Return instance_id
     def get_istance_id_from_name(self, instance_name):
         if not self.conn:
-            return 1
+            return False
         if not instance_name:
-            return 1
+            return False
 
         cursor = self.conn.cursor()
         cursor.execute("SELECT id from vm_instance WHERE instance_name ='"
@@ -296,12 +296,25 @@ class CloudStackSQL(CloudStackOpsBase):
 
         return result
 
+    # Set instance to KVM in the db
+    def update_instance_to_kvm(self, instance_name, vm_template_name, to_storage_pool_name,
+                               guest_os_name="Other PV (64-bit)"):
+        if not self.update_instance_from_xenserver_cluster_to_kvm_cluster(instance_name, vm_template_name,
+                                                                          guest_os_name):
+            print "Error: vm_instance query failed"
+            return False
+        if not self.update_all_volumes_of_instance_from_xenserver_cluster_to_kvm_cluster(instance_name,
+                                                                                         to_storage_pool_name):
+            print "Error: volumes query failed"
+            return False
+        return True
+
     # Update db vm_instance table
     def update_instance_from_xenserver_cluster_to_kvm_cluster(self, instance_name, vm_template_name, guest_os_name):
         if not self.conn:
-            return 1
+            return False
         if not vm_template_name or not guest_os_name or not instance_name:
-            return 1
+            return False
 
         vm_template_id = self.get_template_id_from_name(vm_template_name)
         guest_os_id = self.get_guest_os_id_from_name(guest_os_name)

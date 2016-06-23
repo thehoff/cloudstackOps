@@ -29,7 +29,6 @@ from cloudstackops import cloudstackops
 from cloudstackops import cloudstacksql
 from cloudstackops import xenserver
 from cloudstackops import kvm
-from cloudstackops import hypervisormigration
 import os.path
 from random import choice
 
@@ -133,16 +132,13 @@ if DRYRUN == 1:
 # Init CloudStackOps class
 c = cloudstackops.CloudStackOps(DEBUG, DRYRUN)
 
-# Init Hypervisor Migration class
-m = hypervisormigration.HypervisorMigration()
-
 # Init XenServer class
 x = xenserver.xenserver('root', threads)
-m.xenserver = x
+c.xenserver = x
 
 # Init KVM class
 k = kvm.Kvm('root', threads)
-m.kvm = k
+c.kvm = k
 
 # Init SQL class
 s = cloudstacksql.CloudStackSQL(DEBUG, DRYRUN)
@@ -191,17 +187,49 @@ if toClusterID == 1 or toClusterID is None:
 
 # Get cluster hosts
 cluster_hosts = c.getAllHostsFromCluster(toClusterID)
-first_host = cluster_hosts[0]
+kvm_host = cluster_hosts[0]
 
 # Select storage pool
 targetStorageID = c.getRandomStoragePool(toClusterID)
 targetStoragePoolData = c.getStoragePoolData(targetStorageID)
 storagepooltags = targetStoragePoolData[0].tags
+storagepoolname = targetStoragePoolData[0].name
 
 # Get hosts that belong to toCluster
 toClusterHostsData = c.getHostsFromCluster(toClusterID)
 if DEBUG == 1:
     print "Note: You selected a storage pool with tags '" + storagepooltags + "'"
+
+# Volumes
+voldata = c.getVirtualmachineVolumes(vmID, projectParam)
+saved_storage_id = None
+currentStorageID = None
+
+# Migrate its volumes
+for vol in voldata:
+    # Check if volume is already on correct storage
+    currentStorageID = c.checkCloudStackName(
+        {'csname': vol.storage, 'csApiCall': 'listStoragePools'})
+
+    if saved_storage_id is None:
+        saved_storage_id = currentStorageID
+
+    if saved_storage_id != currentStorageID:
+        print "Error: All attached volumes need to be on the same pool! (%s versus %s)" \
+              % (saved_storage_id, currentStorageID)
+        sys.exit(1)
+
+    if currentStorageID == targetStorageID:
+        print "Warning: No need to migrate volume " + vol.name + " -- already on the desired storage pool. Skipping."
+        continue
+
+if currentStorageID is None:
+    print "Error: Unable to determine the current storage pool of the volumes."
+    sys.exit(1)
+
+# Get hypervisor from old cluster
+cluster_xenserver_hosts = c.getAllHostsFromCluster(currentStorageID)
+xenserver_host = cluster_xenserver_hosts[0]
 
 # Get data from vm
 vmdata = c.getVirtualmachineData(vmID)
@@ -211,13 +239,13 @@ if vmdata is None:
 
 vm = vmdata[0]
 if vm.state == "Running":
-    needToStop = "true"
-    autoStartVM = "true"
+    needToStop = True
+    autoStartVM = True
     print "Note: Found vm " + vm.name + " running on " + vm.hostname
 else:
     print "Note: Found vm " + vm.name + " with state " + vm.state
-    needToStop = "false"
-    autoStartVM = "false"
+    needToStop = False
+    autoStartVM = False
 
 # Figure out the tags
 sodata = c.listServiceOfferings({'serviceofferingid': vm.serviceofferingid})
@@ -230,16 +258,19 @@ if sodata is not None:
 
     if storagetags != '' and storagepooltags != storagetags and c.FORCE == 0:
         if DEBUG == 1:
-            print "Error: cannot do this: storage tags from provided storage pool '" + storagepooltags + "' do not match your vm's service offering '" + storagetags + "'"
+            print "Error: cannot do this: storage tags from provided storage pool '" + storagepooltags + \
+                  "' do not match your vm's service offering '" + storagetags + "'"
             sys.exit(1)
     elif storagetags != '' and storagepooltags != storagetags and c.FORCE == 1:
         if DEBUG == 1:
-            print "Warning: storage tags from provided storage pool '" + storagepooltags + "' do not match your vm's service offering '" + storagetags + "'. Since you used --FORCE you probably know what you manually need to edit in the database."
+            print "Warning: storage tags from provided storage pool '" + storagepooltags + \
+                  "' do not match your vm's service offering '" + storagetags + "'. Since you used --FORCE you " \
+                  "probably know what you manually need to edit in the database."
     elif DEBUG == 1:
         print "Note: Storage tags look OK."
 
 # Stop this vm if it was running
-if needToStop == "true":
+if needToStop:
     if DRYRUN == 1:
         print "Would have stopped vm " + vm.name + " with id " + vm.id
     else:
@@ -259,7 +290,8 @@ if needToStop == "true":
         if result.virtualmachine.state == "Stopped":
             print "Note: " + result.virtualmachine.name + " is stopped successfully "
         else:
-            print "Error: " + result.virtualmachine.name + " is in state " + result.virtualmachine.state + " instead of Stopped. VM need to be stopped to continue. Re-run script to try again -- exit."
+            print "Error: " + result.virtualmachine.name + " is in state " + result.virtualmachine.state + \
+                  " instead of Stopped. VM need to be stopped to continue. Re-run script to try again -- exit."
 
             # Notify admin
             msgSubject = 'Warning: problem with maintenance for VM ' + \
@@ -270,16 +302,27 @@ if needToStop == "true":
 
 # Here we have a stopped VM to work with
 
-# Prepare
-m.prepare_xenserver(first_host)
-m.prepare_kvm()
-
-kvmhost = "TODO"
+# Prepare the folders
+x.prepare_xenserver()
+k.prepare_kvm(kvm_host)
 
 # Get all volumes
 volumes_result = s.get_volumes_for_instance(instancename)
 for (name, path) in volumes_result:
-    m.migrate_volume_from_xenserver_to_kvm(first_host, kvmhost, path)
+    print "Note: Processing volume '%s', filename '%s'" % (name, path)
+    # Transfer volume from XenServer to KVM
+    if not c.transfer_volume_from_xenserver_to_kvm(xenserver_host, kvm_host, path):
+        print "Error: Transferring volume failed"
+        sys.exit(1)
+    print "Note: Transferring volume to KVM was successful"
+    # Make volume compatibl with KVM
+    if not k.make_kvm_compatible(kvm_host, path):
+        print "Error: Converting volume failed"
+        sys.exit(1)
+    print "Note: Converting volume to KVM was successful"
+
+print "Note: Updating the database"
+s.update_instance_to_kvm(instancename, newBaseTemplate, storagepoolname)
 
 # Disconnect MySQL
 s.disconnectMySQL()

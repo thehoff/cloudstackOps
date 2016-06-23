@@ -78,7 +78,7 @@ class CloudStackOps(CloudStackOpsBase):
         self.pp = pprint.PrettyPrinter(depth=6)
         self.ssh = None
         self.xenserver = None
-
+        self.kvm = None
         self.printWelcome()
         self.checkScreenAlike()
 
@@ -1687,3 +1687,16 @@ class CloudStackOps(CloudStackOpsBase):
 
       # Call CloudStack API
       return self._callAPI(apicall)
+
+    def transfer_volume_from_xenserver_to_kvm(self, xshost, kvmhost, vdi_uuid):
+        # Export volume
+        result = self.xenserver.export_volume(xshost, vdi_uuid)
+        if not result:
+            print "Error: Could not export vdi %s on host %s" % (vdi_uuid, xshost)
+            return False
+        print "Note received this result:" + str(result)
+        result = self.kvm.download_volume_from_xenserver(xshost, kvmhost, vdi_uuid)
+        if not result:
+            print "Error: Could not download vdi %s from host %s to host %s" % (vdi_uuid, xshost, kvmhost)
+            return False
+        print "Note received this result:" + str(result)

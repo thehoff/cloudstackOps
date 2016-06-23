@@ -48,13 +48,20 @@ output['output'] = False
 output['warnings'] = False
 
 
-# Class to handle XenServer patching
 class Kvm(hypervisor):
 
     def __init__(self, ssh_user='root', threads=5):
         self.ssh_user = ssh_user
         self.threads = threads
         self.mountpoint = ""
+
+    def prepare_kvm(self, kvmhost):
+        result = self.create_migration_nfs_dir(kvmhost)
+        if not result:
+            print "Error: Could not prepare the migration folder on host " + kvmhost
+            sys.exit(1)
+        print "Note received this result:" + str(result)
+        return True
 
     def find_nfs_mountpoint(self, host):
         print "Note: Looking for NFS mount on KVM"
@@ -91,39 +98,59 @@ class Kvm(hypervisor):
         except:
             return False
 
-    def convert_volume_to_qcow(self, kvmhost, vdi_uuid):
-        print "Note: Converting disk %s to QCOW2 on host %s" % (vdi_uuid, kvmhost)
+    def make_kvm_compatible(self, kvmhost, volume_uuid):
+        result = self.convert_volume_to_qcow(kvmhost, volume_uuid)
+        if not result:
+            print "Error: Could not convert volume %s on host %s" % (volume_uuid, kvmhost)
+            return False
+        result = self.fix_partition_size(kvmhost, volume_uuid)
+        if not result:
+            print "Error: Could not fix partition of volume %s on host %s" % (volume_uuid, kvmhost)
+            return False
+        result = self.inject_drivers(kvmhost, volume_uuid)
+        if not result:
+            print "Error: Could not inject drivers on volume %s on host %s" % (volume_uuid, kvmhost)
+            return False
+        result = self.move_disk_to_pool(kvmhost, volume_uuid)
+        if not result:
+            print "Error: Could not move volume %s to the storage pool on host %s" % (volume_uuid, kvmhost)
+            return False
+        return True
+
+    def convert_volume_to_qcow(self, kvmhost, volume_uuid):
+        print "Note: Converting disk %s to QCOW2 on host %s" % (volume_uuid, kvmhost)
         try:
             with settings(host_string=self.ssh_user + "@" + kvmhost.ipaddress):
                 command = "cd %s; qemu-img convert %s.vhd -O qcow2 -c %s" % (self.get_migration_path(),
-                                                                             vdi_uuid, vdi_uuid)
+                                                                             volume_uuid, volume_uuid)
                 return fab.run(command)
         except:
             return False
 
-    def fix_partition_size(self, kvmhost, vdi_uuid):
-        print "Note: Fixing disk %s to QCOW2 on host %s" % (vdi_uuid, kvmhost)
+    def fix_partition_size(self, kvmhost, volume_uuid):
+        print "Note: Fixing disk %s to QCOW2 on host %s" % (volume_uuid, kvmhost)
         try:
             with settings(host_string=self.ssh_user + "@" + kvmhost.ipaddress):
-                command = "cd %s; qemu-img resize %s +500KB" % (self.get_migration_path(), vdi_uuid)
+                command = "cd %s; qemu-img resize %s +500KB" % (self.get_migration_path(), volume_uuid)
                 return fab.run(command)
         except:
             return False
 
-    def inject_drivers(self, kvmhost, vdi_uuid):
-        print "Note: Inject drivers into disk %s on host %s" % (vdi_uuid, kvmhost)
+    def inject_drivers(self, kvmhost, volume_uuid):
+        print "Note: Inject drivers into disk %s on host %s" % (volume_uuid, kvmhost)
         try:
             with settings(host_string=self.ssh_user + "@" + kvmhost.ipaddress):
-                command = "cd %s; virt-v2v -i disk %s -o local -os ./" % (self.get_migration_path(), vdi_uuid)
+                command = "cd %s; virt-v2v -i disk %s -o local -os ./" % (self.get_migration_path(), volume_uuid)
                 return fab.run(command)
         except:
             return False
 
-    def move_disk_to_pool(self, kvmhost, vdi_uuid):
+    def move_disk_to_pool(self, kvmhost, volume_uuid):
         print "Note: Moving disk %s into place on host %s" % (vdi_uuid, kvmhost)
         try:
             with settings(host_string=self.ssh_user + "@" + kvmhost.ipaddress):
-                command = "cd %s; mv %s-sda %s/%s" % (self.get_migration_path(), vdi_uuid, self.mountpoint, vdi_uuid)
+                command = "cd %s; mv %s-sda %s/%s" % (self.get_migration_path(), volume_uuid, self.mountpoint,
+                                                      volume_uuid)
                 return fab.run(command)
         except:
             return False

@@ -309,6 +309,14 @@ class xenserver(hypervisor):
         except:
             return False
 
+    def prepare_xenserver(self, xenhost):
+        result = self.create_migration_nfs_dir(xenhost)
+        if not result:
+            print "Error: Could not prepare the export folder on host " + xenhost
+            sys.exit(1)
+        print "Note received this result:" + str(result)
+        return True
+
     def find_nfs_mountpoint(self, host):
         print "Note: Looking for NFS mount on XenServer"
         if self.mountpoint is not None:
