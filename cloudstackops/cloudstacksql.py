@@ -200,7 +200,7 @@ class CloudStackSQL(CloudStackOpsBase):
 
         return result
 
-    # get uuid of router volume
+    # Return uuid of router volume
     def getRouterRootVolumeUUID(self, routeruuid):
         if not self.conn:
             return 1
@@ -221,11 +221,11 @@ class CloudStackSQL(CloudStackOpsBase):
 
         return result
 
-    # get volumes that belong to a given instance ID
+    # Return volumes that belong to a given instance ID
     def get_volumes_for_instance(self, instancename):
         if not self.conn:
             return 1
-        if not instanceid:
+        if not instancename:
             return 1
 
         cursor = self.conn.cursor()
@@ -236,3 +236,118 @@ class CloudStackSQL(CloudStackOpsBase):
         cursor.close()
 
         return result
+
+    # Return new template id
+    def get_template_id_from_name(self, template_name):
+        if not self.conn:
+            return 1
+        if not template_name:
+            return 1
+
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT id FROM vm_template WHERE name = '" + template_name + "' AND removed is NULL LIMIT 1;")
+        result = cursor.fetchall()
+        cursor.close()
+
+        return result
+
+    # Return guest_os id
+    def get_guest_os_id_from_name(self, guest_os_name):
+        if not self.conn:
+            return 1
+        if not guest_os_name:
+            return 1
+
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT id from guest_os WHERE display_name ='"
+                       + guest_os_name + "' AND removed is NULL LIMIT 1;")
+        result = cursor.fetchall()
+        cursor.close()
+
+        return result
+
+    # Return storage_pool id
+    def get_storage_pool_id_from_name(self, storage_pool_name):
+        if not self.conn:
+            return 1
+        if not storage_pool_name:
+            return 1
+
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT storage_pool.id FROM cluster, storage_pool WHERE storage_pool.cluster_id = cluster.id "
+                       "AND cluster.name='" + storage_pool_name + "' AND removed is NULL LIMIT 1;")
+        result = cursor.fetchall()
+        cursor.close()
+
+        return result
+
+    # Return instance_id
+    def get_istance_id_from_name(self, instance_name):
+        if not self.conn:
+            return 1
+        if not instance_name:
+            return 1
+
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT id from vm_instance WHERE instance_name ='"
+                       + instance_name + "' AND removed is NULL LIMIT 1;")
+        result = cursor.fetchall()
+        cursor.close()
+
+        return result
+
+    # Update db vm_instance table
+    def update_instance_from_xenserver_cluster_to_kvm_cluster(self, instance_name, vm_template_name, guest_os_name):
+        if not self.conn:
+            return 1
+        if not vm_template_name or not guest_os_name or not instance_name:
+            return 1
+
+        vm_template_id = self.get_template_id_from_name(vm_template_name)
+        guest_os_id = self.get_guest_os_id_from_name(guest_os_name)
+
+        cursor = self.conn.cursor()
+
+        try:
+            cursor.execute ("""
+               UPDATE vm_instance
+               SET last_host_id=NULL, hypervisor_type='KVM', vm_template_id=%d, guest_os_id=%d
+               WHERE instance_name=%s LIMIT 1
+            """, (vm_template_id, guest_os_id, instance_name))
+
+            cursor.commit()
+        except MySQLdb.Error as e:
+            print "Query failed"
+            print e
+            return False
+
+        cursor.close()
+        return True
+
+    # Update db volumes table
+    def update_all_volumes_of_instance_from_xenserver_cluster_to_kvm_cluster(self, instance_name, to_storage_pool_name):
+        if not self.conn:
+            return 1
+        if not instance_name or not to_storage_pool_name:
+            return 1
+
+        instance_id = self.get_istance_id_from_name(instance_name)
+        to_storage_pool_id = self.get_storage_pool_id_from_name(to_storage_pool_name)
+
+        cursor = self.conn.cursor()
+
+        try:
+            cursor.execute ("""
+               UPDATE volumes
+               SET template_id=NULL, last_pool_id=NULL, format='QCOW2', pool_id=%d
+               WHERE instance_id=%d LIMIT 1
+            """, (to_storage_pool_id, instance_id))
+
+            cursor.commit()
+        except MySQLdb.Error as e:
+            print "Query failed"
+            print e
+            return False
+
+        cursor.close()
+        return True
