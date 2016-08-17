@@ -149,7 +149,7 @@ if __name__ == '__main__':
 c = cloudstackops.CloudStackOps(DEBUG, DRYRUN)
 
 # Init XenServer class
-x = xenserver.xenserver('root', threads, pre_empty_script, post_empty_script)
+x = xenserver.xenserver('root', c, threads, pre_empty_script, post_empty_script)
 c.xenserver = x
 
 # make credentials file known to our class

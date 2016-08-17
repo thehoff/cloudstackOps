@@ -50,12 +50,13 @@ output['warnings'] = False
 # Class to handle XenServer patching
 class xenserver():
 
-    def __init__(self, ssh_user='root', threads=5, pre_empty_script='xenserver_pre_empty_script.sh',
+    def __init__(self, ssh_user='root', c=None, threads=5, pre_empty_script='xenserver_pre_empty_script.sh',
                  post_empty_script='xenserver_post_empty_script.sh'):
         self.ssh_user = ssh_user
         self.threads = threads
         self.pre_empty_script = pre_empty_script
         self.post_empty_script = post_empty_script
+        self.c = c
 
     # Wait for hypervisor to become alive again
     def check_connect(self, host):
@@ -165,7 +166,22 @@ class xenserver():
                 if int(numer_of_vms) == 0:
                     break
                 time.sleep(5)
-            print "Note: Done evacuating host " + host.name + " @ " + time.strftime("%Y-%m-%d %H:%M")
+            print "Note: XenServer reports no more running VMs on host " + host.name + ", checking Cosmic"
+
+            if self.c is not None:
+                hostID = self.c.checkCloudStackName({'csname': host.name, 'csApiCall': 'listHosts'})
+                numer_of_vms = self.c.getVirtualMachinesRunningOnHost(hostID)
+                print "Note: Migration progress will appear here.."
+                while numer_of_vms > 0:
+                    numer_of_vms = self.c.getVirtualMachinesRunningOnHost(hostID)
+                    # Overwrite previous lin_
+                    sys.stdout.write("\033[F")
+                    print "Progress: On host " + host.name + " there are " + numer_of_vms + " VMs running according to Cosmic."
+                    if int(numer_of_vms) == 0:
+                        break
+                    time.sleep(5)
+            else:
+                print "Note: Done evacuating host " + host.name + " @ " + time.strftime("%Y-%m-%d %H:%M")
             return True
         except:
             return False
