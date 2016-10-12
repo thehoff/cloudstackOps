@@ -186,6 +186,9 @@ vmID = c.checkCloudStackName({'csname': instancename,
 toClusterID = c.checkCloudStackName(
     {'csname': toCluster, 'csApiCall': 'listClusters'})
 
+templateID = c.checkCloudStackName(
+    {'csname': newBaseTemplate, 'csApiCall': 'listTemplates'})
+
 print "Note Cluster ID found for %s is %s" % (toCluster, toClusterID)
 
 if toClusterID == 1 or toClusterID is None:
