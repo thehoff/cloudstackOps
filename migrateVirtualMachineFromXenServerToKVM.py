@@ -186,13 +186,19 @@ vmID = c.checkCloudStackName({'csname': instancename,
 toClusterID = c.checkCloudStackName(
     {'csname': toCluster, 'csApiCall': 'listClusters'})
 
+print "Note Cluster ID found for %s is %s" % (toCluster, toClusterID)
+
 templateID = c.checkCloudStackName(
     {'csname': newBaseTemplate, 'csApiCall': 'listTemplates'})
 
-print "Note Cluster ID found for %s is %s" % (toCluster, toClusterID)
+print "Note Template ID found for %s is %s" % (newBaseTemplate, templateID)
 
 if toClusterID == 1 or toClusterID is None:
     print "Error: Cluster with name '" + toCluster + "' can not be found! Halting!"
+    sys.exit(1)
+
+if templateID == 1 or templateID is None:
+    print "Error: Template with name '" + newBaseTemplate + "' can not be found! Halting!"
     sys.exit(1)
 
 # Get cluster hosts

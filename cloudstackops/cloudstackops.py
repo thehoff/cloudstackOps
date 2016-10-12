@@ -320,6 +320,7 @@ class CloudStackOps(CloudStackOpsBase):
             apicall = listZones.listZonesCmd()
         elif csApiCall == "listTemplates":
             apicall = listTemplates.listTemplatesCmd()
+            apicall.templatefilter = "all"
         else:
             print "No API command to call"
             sys.exit(1)
