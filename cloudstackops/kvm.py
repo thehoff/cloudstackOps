@@ -65,7 +65,6 @@ class Kvm(hypervisor.hypervisor):
         if result is False:
             print "Error: Could not prepare the migration folder on host " + kvmhost.name
             sys.exit(1)
-        print "Note: Migration folder is $s " % result
         return True
 
     def find_nfs_mountpoint(self, host):
@@ -90,7 +89,7 @@ class Kvm(hypervisor.hypervisor):
         if len(mountpoint) == 0:
             print "Error: mountpoint cannot be empty"
             return False
-        print "Note: Looking for migration folder"
+        print "Note: Creating migration folder"
         try:
             with settings(host_string=self.ssh_user + "@" + host.ipaddress):
                 command = "sudo mkdir -p " + mountpoint + "/migration/"
@@ -108,27 +107,27 @@ class Kvm(hypervisor.hypervisor):
         except:
             return False
 
-    def make_kvm_compatible(self, kvmhost, path, skipvirtvtov=False, skippartitionfix=False):
+    def make_kvm_compatible(self, kvmhost, path, virtvtov=True, partitionfix=True):
         result = self.convert_volume_to_qcow(kvmhost, path)
         if result is False:
             print "Error: Could not convert volume %s on host %s" % (path, kvmhost.name)
             return False
-        if skippartitionfix is False:
+        if partitionfix is True:
             result = self.fix_partition_size(kvmhost, path)
             if result is False:
                 print "Error: Could not fix partition of volume %s on host %s" % (path, kvmhost.name)
                 return False
-        if skipvirtvtov is False:
+        if virtvtov is True:
             result = self.inject_drivers(kvmhost, path)
             if result is False:
                 print "Error: Could not inject drivers on volume %s on host %s" % (path, kvmhost.name)
                 return False
-            result = self.move_datadisk_to_pool(kvmhost, path)
+            result = self.move_rootdisk_to_pool(kvmhost, path)
             if result is False:
                 print "Error: Could not move rootvolume %s to the storage pool on host %s" % (path, kvmhost.name)
                 return False
         else:
-            result = self.move_rootdisk_to_pool(kvmhost, path)
+            result = self.move_datadisk_to_pool(kvmhost, path)
             if result is False:
                 print "Error: Could not move datavolume %s to the storage pool on host %s" % (path, kvmhost.name)
                 return False
