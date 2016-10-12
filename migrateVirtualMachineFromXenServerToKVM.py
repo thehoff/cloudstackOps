@@ -60,7 +60,7 @@ def handleArguments(argv):
     global newBaseTemplate
     newBaseTemplate = ''
     global skipVirtvtov
-    skipVirtvToV = False
+    skipVirtvtov = False
 
     # Usage message
     help = "Usage: ./" + os.path.basename(__file__) + ' [options] ' + \
