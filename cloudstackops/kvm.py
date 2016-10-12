@@ -122,13 +122,17 @@ class Kvm(hypervisor.hypervisor):
             if result is False:
                 print "Error: Could not inject drivers on volume %s on host %s" % (path, kvmhost.name)
                 return False
+            result = self.move_datadisk_to_pool(kvmhost, path)
+            if result is False:
+                print "Error: Could not move rootvolume %s to the storage pool on host %s" % (path, kvmhost.name)
+                return False
         else:
+            result = self.move_rootdisk_to_pool(kvmhost, path)
+            if result is False:
+                print "Error: Could not move datavolume %s to the storage pool on host %s" % (path, kvmhost.name)
+                return False
             print "Note: Skipping virt-v2v step due to --skipVirtvtov flag"
-        result = self.move_disk_to_pool(kvmhost, path)
-        if result is False:
-            print "Error: Could not move volume %s to the storage pool on host %s" % (path, kvmhost.name)
-            return False
-        return True
+         return True
 
     def convert_volume_to_qcow(self, kvmhost, volume_uuid):
         print "Note: Converting disk %s to QCOW2 on host %s" % (volume_uuid, kvmhost.name)
@@ -158,11 +162,21 @@ class Kvm(hypervisor.hypervisor):
         except:
             return False
 
-    def move_disk_to_pool(self, kvmhost, volume_uuid):
+    def move_rootdisk_to_pool(self, kvmhost, volume_uuid):
         print "Note: Moving disk %s into place on host %s" % (volume_uuid, kvmhost.name)
         try:
             with settings(host_string=self.ssh_user + "@" + kvmhost.ipaddress):
                 command = "cd %s; sudo mv %s-sda %s/%s" % (self.get_migration_path(), volume_uuid, self.mountpoint,
+                                                           volume_uuid)
+                return fab.run(command)
+        except:
+            return False
+
+    def move_datadisk_to_pool(self, kvmhost, volume_uuid):
+        print "Note: Moving disk %s into place on host %s" % (volume_uuid, kvmhost.name)
+        try:
+            with settings(host_string=self.ssh_user + "@" + kvmhost.ipaddress):
+                command = "cd %s; sudo mv %s %s/%s" % (self.get_migration_path(), volume_uuid, self.mountpoint,
                                                            volume_uuid)
                 return fab.run(command)
         except:

@@ -397,7 +397,7 @@ for (name, path, uuid, vmstate, voltype) in volumes_result:
             print "Error: Making volume KVM compatible failed"
             print "Note: Nothing has changed, you can either retry or start the VM on XenServer"
             sys.exit(1)
-        print "Note: Converting volume to KVM was successful, proceeding with SQL steps"
+        print "Note: Converting volume to KVM was successful"
 
 print "Note: Updating the database"
 if not s.update_instance_to_kvm(instancename, newBaseTemplate, storagepoolname):
