@@ -406,9 +406,9 @@ if not s.update_instance_to_kvm(instancename, newBaseTemplate, storagepoolname):
     sys.exit(1)
 
 # Start the VM again
-if autoStartVM == "true":
+if autoStartVM:
     if DRYRUN == 1:
-        print "Would have started vm " + vm.name + " with id " + vm.id + " on host " + toHostData.id
+        print "Would have started vm " + vm.name + " with id " + vm.id
     else:
         print "Executing: start virtualmachine " + vm.name + " with id " + vm.id
         result = c.startVirtualMachine(vm.id)
@@ -428,7 +428,8 @@ if autoStartVM == "true":
             # Get user data to e-mail
             adminData = c.getDomainAdminUserData(vm.domainid)
             if DRYRUN == 1:
-                print "Note: Not sending notification e-mails due to DRYRUN setting. Would have e-mailed " + adminData.email
+                print "Note: Not sending notification e-mails due to DRYRUN setting. " \
+                      "Would have e-mailed " + adminData.email
             else:
 
                 if not adminData.email:
