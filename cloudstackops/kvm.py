@@ -40,12 +40,12 @@ env.parallel = False
 env.pool_size = 1
 
 # Supress Fabric output by default, we will enable when needed
-output['debug'] = True
-output['running'] = True
-output['stdout'] = True
-output['stdin'] = True
-output['output'] = True
-output['warnings'] = True
+output['debug'] = False
+output['running'] = False
+output['stdout'] = False
+output['stdin'] = False
+output['output'] = False
+output['warnings'] = False
 
 
 class Kvm(hypervisor.hypervisor):
