@@ -65,6 +65,7 @@ class Kvm(hypervisor.hypervisor):
         if result is False:
             print "Error: Could not prepare the migration folder on host " + kvmhost.name
             sys.exit(1)
+        print "Note: Migration folder is $s " % result
         return True
 
     def find_nfs_mountpoint(self, host):
@@ -177,7 +178,7 @@ class Kvm(hypervisor.hypervisor):
         try:
             with settings(host_string=self.ssh_user + "@" + kvmhost.ipaddress):
                 command = "cd %s; sudo mv %s %s/%s" % (self.get_migration_path(), volume_uuid, self.mountpoint,
-                                                           volume_uuid)
+                                                       volume_uuid)
                 return fab.run(command)
         except:
             return False
