@@ -216,6 +216,27 @@ toClusterHostsData = c.getHostsFromCluster(toClusterID)
 if DEBUG == 1:
     print "Note: You selected a storage pool with tags '" + str(storagepooltags) + "'"
 
+# Get data from vm
+vmdata = c.getVirtualmachineData(vmID)
+if vmdata is None:
+    print "Error: Could not find vm " + instancename + "!"
+    sys.exit(1)
+
+vm = vmdata[0]
+
+if vm.hypervisor == "KVM":
+    print "Error: VM %s aka '%s' is already happily running on KVM!" % (vm.instancename, vm.name)
+    sys.exit(1)
+
+if vm.state == "Running":
+    needToStop = True
+    autoStartVM = True
+    print "Note: Found vm " + vm.name + " running on " + vm.hostname
+else:
+    print "Note: Found vm " + vm.name + " with state " + vm.state
+    needToStop = False
+    autoStartVM = False
+
 # Volumes
 voldata = c.getVirtualmachineVolumes(vmID, projectParam)
 saved_storage_id = None
@@ -242,22 +263,6 @@ for vol in voldata:
 if currentStorageID is None:
     print "Error: Unable to determine the current storage pool of the volumes."
     sys.exit(1)
-
-# Get data from vm
-vmdata = c.getVirtualmachineData(vmID)
-if vmdata is None:
-    print "Error: Could not find vm " + instancename + "!"
-    sys.exit(1)
-
-vm = vmdata[0]
-if vm.state == "Running":
-    needToStop = True
-    autoStartVM = True
-    print "Note: Found vm " + vm.name + " running on " + vm.hostname
-else:
-    print "Note: Found vm " + vm.name + " with state " + vm.state
-    needToStop = False
-    autoStartVM = False
 
 # Figure out the tags
 sodata = c.listServiceOfferings({'serviceofferingid': vm.serviceofferingid})
