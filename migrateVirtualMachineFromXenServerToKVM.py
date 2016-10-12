@@ -59,8 +59,8 @@ def handleArguments(argv):
     mysqlPasswd = ''
     global newBaseTemplate
     newBaseTemplate = ''
-    global skipVirtvtov
-    skipVirtvtov = False
+    global doVirtvtov
+    doVirtvtov = True
 
     # Usage message
     help = "Usage: ./" + os.path.basename(__file__) + ' [options] ' + \
@@ -114,7 +114,7 @@ def handleArguments(argv):
         elif opt in ("--force"):
             force = 1
         elif opt in ("--skip-virt-v2v"):
-            skipVirtvtov = True
+            doVirtvtov = False
 
     # Default to cloudmonkey default config file
     if len(configProfileName) == 0:
@@ -388,7 +388,7 @@ for (name, path, uuid, vmstate, voltype) in volumes_result:
             kvmresult = k.make_kvm_compatible(kvm_host, path, False, True)
         elif voltype == "ROOT":
             print "Note: %s is a disk of type %s" % (name, voltype)
-            kvmresult = k.make_kvm_compatible(kvm_host, path, skipVirtvtov, True)
+            kvmresult = k.make_kvm_compatible(kvm_host, path, doVirtvtov, True)
         else:
             print "Error: Found volume %s with unknown type %s. Halting." % (name, voltype)
             sys.exit(1)
