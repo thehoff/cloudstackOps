@@ -261,7 +261,10 @@ class CloudStackSQL(CloudStackOpsBase):
             print cursor.statement
         cursor.close()
 
-        return result[0][0]
+        try:
+            return result[0][0]
+        except:
+            return False
 
     # Return guest_os id
     def get_guest_os_id_from_name(self, guest_os_name):
@@ -278,7 +281,10 @@ class CloudStackSQL(CloudStackOpsBase):
             print "DEBUG: Executed SQL: " + cursor.statement
         cursor.close()
 
-        return result[0][0]
+        try:
+            return result[0][0]
+        except:
+            return False
 
     # Return storage_pool id
     def get_storage_pool_id_from_name(self, storage_pool_name):
@@ -298,7 +304,10 @@ class CloudStackSQL(CloudStackOpsBase):
         result = cursor.fetchall()
         cursor.close()
 
-        return result[0][0]
+        try:
+            return result[0][0]
+        except:
+            return False
 
     # Return instance_id
     def get_istance_id_from_name(self, instance_name):
@@ -316,7 +325,10 @@ class CloudStackSQL(CloudStackOpsBase):
         result = cursor.fetchall()
         cursor.close()
 
-        return result[0][0]
+        try:
+            return result[0][0]
+        except:
+            return False
 
     # Set instance to KVM in the db
     def update_instance_to_kvm(self, instance_name, vm_template_name, to_storage_pool_name,
@@ -340,6 +352,10 @@ class CloudStackSQL(CloudStackOpsBase):
 
         vm_template_id = self.get_template_id_from_name(vm_template_name)
         guest_os_id = self.get_guest_os_id_from_name(guest_os_name)
+
+        if not vm_template_id or not guest_os_id:
+            print "Error: Template or GuestOS not found."
+            return False
 
         cursor = self.conn.cursor()
 
