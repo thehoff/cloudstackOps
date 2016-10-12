@@ -385,7 +385,7 @@ for (name, path, uuid, vmstate, voltype) in volumes_result:
         kvmresult = False
         if voltype == "DATADISK":
             print "Note: %s is a disk of type %s so skipping virt-v2v and friends" % (name, voltype)
-            kvmresult = k.make_kvm_compatible(kvm_host, path, False, False)
+            kvmresult = k.make_kvm_compatible(kvm_host, path, False, True)
         elif voltype == "ROOT":
             print "Note: %s is a disk of type %s" % (name, voltype)
             kvmresult = k.make_kvm_compatible(kvm_host, path, skipVirtvtov, True)
