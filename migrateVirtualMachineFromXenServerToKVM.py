@@ -342,8 +342,10 @@ for (name, path, uuid, vmstate) in volumes_result:
         print "Note: Converting volume to KVM was successful, proceeding with SQL steps"
 
 print "Note: Updating the database"
-s.update_instance_to_kvm(instancename, newBaseTemplate, storagepoolname)
-
+if not s.update_instance_to_kvm(instancename, newBaseTemplate, storagepoolname):
+    print "Error: Updating the database failed"
+    print "Note: Nothing has changed, you can either retry or start the VM on XenServer"
+    sys.exit(1)
 print "Note: All done!"
 print "Note: @TODO start the vm"
 
