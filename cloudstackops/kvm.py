@@ -107,16 +107,17 @@ class Kvm(hypervisor.hypervisor):
         except:
             return False
 
-    def make_kvm_compatible(self, kvmhost, path, skipVirtvtov):
+    def make_kvm_compatible(self, kvmhost, path, skipvirtvtov=False, skippartitionfix=False):
         result = self.convert_volume_to_qcow(kvmhost, path)
         if result is False:
             print "Error: Could not convert volume %s on host %s" % (path, kvmhost.name)
             return False
-        result = self.fix_partition_size(kvmhost, path)
-        if result is False:
-            print "Error: Could not fix partition of volume %s on host %s" % (path, kvmhost.name)
-            return False
-        if skipVirtvtov is False:
+        if skippartitionfix is False:
+            result = self.fix_partition_size(kvmhost, path)
+            if result is False:
+                print "Error: Could not fix partition of volume %s on host %s" % (path, kvmhost.name)
+                return False
+        if skipvirtvtov is False:
             result = self.inject_drivers(kvmhost, path)
             if result is False:
                 print "Error: Could not inject drivers on volume %s on host %s" % (path, kvmhost.name)

@@ -358,7 +358,7 @@ k.put_scripts(kvm_host)
 
 # Get all volumes
 volumes_result = s.get_volumes_for_instance(instancename)
-for (name, path, uuid, vmstate) in volumes_result:
+for (name, path, uuid, vmstate, voltype) in volumes_result:
     print "Note: Processing volume '%s', filename '%s', uuid '%s'" % (name, path, uuid)
 
     if DRYRUN == 1:
@@ -382,7 +382,18 @@ for (name, path, uuid, vmstate) in volumes_result:
             print "Note: Nothing has changed, you can either retry or start the VM on XenServer"
             sys.exit(1)
         print "Note: Downloading volume to KVM was successful"
-        if k.make_kvm_compatible(kvm_host, path, skipVirtvtov) is False:
+        kvmresult = False
+        if voltype == "DATADISK":
+            print "Note: %s is a disk of type %s so skipping virt-v2v and friends" % (name, voltype)
+            kvmresult = k.make_kvm_compatible(kvm_host, path, True, True)
+        elif voltype == "ROOT":
+            print "Note: %s is a disk of type %s" % (name, voltype)
+            kvmresult = k.make_kvm_compatible(kvm_host, path, skipVirtvtov, False)
+        else:
+            print "Error: Found volume %s with unknown type %s. Halting." % (name, voltype)
+            sys.exit(1)
+
+        if kvmresult is False:
             print "Error: Making volume KVM compatible failed"
             print "Note: Nothing has changed, you can either retry or start the VM on XenServer"
             sys.exit(1)

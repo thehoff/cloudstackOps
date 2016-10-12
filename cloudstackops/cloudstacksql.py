@@ -235,7 +235,8 @@ class CloudStackSQL(CloudStackOpsBase):
             return 1
 
         cursor = self.conn.cursor()
-        cursor.execute("SELECT volumes.name, volumes.path, volumes.uuid, vm_instance.state as vmstate" +
+        cursor.execute("SELECT volumes.name, volumes.path, volumes.uuid, vm_instance.state as vmstate, "
+                       "volumes.volume_type as voltype" +
                        " FROM vm_instance, volumes" +
                        " WHERE volumes.instance_id = vm_instance.id" +
                        " AND instance_name='" + instancename + "';")
