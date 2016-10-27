@@ -424,7 +424,7 @@ for (name, path, uuid, vmstate, voltype) in volumes_result:
 
         if kvmresult is False:
             print "Error: Making volume KVM compatible failed"
-            print "Note: If using Linux, you could try using --skipVirtvtov to skip the virt-v2v steps"
+            print "Note: If using Linux, you could try using --skip-virt-v2v to skip the virt-v2v steps"
             print "Note: Nothing has changed, you can either retry or start the VM on XenServer"
             sys.exit(1)
         print "Note: Converting volume to KVM was successful"
