@@ -108,7 +108,7 @@ class Kvm(hypervisor.hypervisor):
         print "Note: Downloading disk from %s to host %s" % (url, kvmhost.name)
         try:
             with settings(host_string=self.ssh_user + "@" + kvmhost.ipaddress):
-                command = "sudo aria2c --file-allocation=none -c -m 5 -d %s -o %s.vhd %s" % \
+                command = "nice -n 19 sudo aria2c --file-allocation=none -c -m 5 -d %s -o %s.vhd %s" % \
                           (self.get_migration_path(), path, url)
                 return fab.run(command)
         except:
@@ -154,7 +154,7 @@ class Kvm(hypervisor.hypervisor):
         print "Note: Converting disk %s to QCOW2 on host %s" % (volume_uuid, kvmhost.name)
         try:
             with settings(host_string=self.ssh_user + "@" + kvmhost.ipaddress):
-                command = "cd %s; sudo qemu-img convert %s.vhd -O qcow2 %s" % (self.get_migration_path(),
+                command = "cd %s; nice -n 19 sudo qemu-img convert %s.vhd -O qcow2 %s" % (self.get_migration_path(),
                                                                              volume_uuid, volume_uuid)
                 return fab.run(command)
         except:
