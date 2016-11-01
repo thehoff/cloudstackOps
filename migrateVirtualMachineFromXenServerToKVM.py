@@ -173,7 +173,8 @@ s = cloudstacksql.CloudStackSQL(DEBUG, DRYRUN)
 # Connect MySQL
 result = s.connectMySQL(mysqlHost, mysqlPasswd)
 if result > 0:
-    print "Error: MySQL connection failed"
+    message = "MySQL connection failed"
+    c.print_message(message=message, message_type="Error", to_slack=True)
     sys.exit(1)
 elif DEBUG == 1:
     print "DEBUG: MySQL connection successful"
@@ -192,7 +193,7 @@ if DEBUG == 1:
 
 # Check cloudstack IDs
 if DEBUG == 1:
-    print "Note: Checking CloudStack IDs of provided input.."
+    print "Debug: Checking CloudStack IDs of provided input.."
 
 if isProjectVm == 1:
     projectParam = "true"
@@ -206,20 +207,24 @@ vmID = c.checkCloudStackName({'csname': instancename,
 toClusterID = c.checkCloudStackName(
     {'csname': toCluster, 'csApiCall': 'listClusters'})
 
-print "Note: Cluster ID found for %s is %s" % (toCluster, toClusterID)
+message = "Cluster ID found for %s is %s" % (toCluster, toClusterID)
+c.print_message(message=message, message_type="Note", to_slack=False)
 c.cluster = toCluster
 
 templateID = c.checkCloudStackName(
     {'csname': newBaseTemplate, 'csApiCall': 'listTemplates'})
 
-print "Note: Template ID found for %s is %s" % (newBaseTemplate, templateID)
+message = "Template ID found for %s is %s" % (newBaseTemplate, templateID)
+c.print_message(message=message, message_type="Note", to_slack=False)
 
 if toClusterID == 1 or toClusterID is None:
-    print "Error: Cluster with name '" + toCluster + "' can not be found! Halting!"
+    message = "Cluster with name '%s' can not be found! Halting!" % toCluster
+    c.print_message(message=message, message_type="Error", to_slack=False)
     sys.exit(1)
 
 if templateID == 1 or templateID is None:
-    print "Error: Template with name '" + newBaseTemplate + "' can not be found! Halting!"
+    message = "Template with name '%s' can not be found! Halting!" % newBaseTemplate
+    c.print_message(message=message, message_type="Error", to_slack=False)
     sys.exit(1)
 
 # Get cluster hosts
@@ -239,25 +244,31 @@ if DEBUG == 1:
 # Get data from vm
 vmdata = c.getVirtualmachineData(vmID)
 if vmdata is None:
-    print "Error: Could not find vm " + instancename + "!"
+    message = "Error: Could not find vm %s !" % instancename
+    c.print_message(message=message, message_type="Error", to_slack=False)
     sys.exit(1)
 
 vm = vmdata[0]
 
 if vm.hypervisor == "KVM":
-    print "Error: VM %s aka '%s' is already happily running on KVM!" % (vm.instancename, vm.name)
+    message = "VM %s aka '%s' is already happily running on KVM!" % (vm.instancename, vm.name)
+    c.print_message(message=message, message_type="Error", to_slack=False)
     sys.exit(1)
 
 if vm.state == "Running":
     needToStop = True
     autoStartVM = True
-    print "Note: Found vm " + vm.name + " running on " + vm.hostname
+    message = "Found vm %s running on %s" % (vm.name, vm.hostname)
+    c.print_message(message=message, message_type="Note", to_slack=True)
+
 elif vm.state == "Stopped":
-    print "Note: Found vm " + vm.name + " with state " + vm.state
+    message = "Found vm %s with state %s" % (vm.name, vm.state)
+    c.print_message(message=message, message_type="Note", to_slack=True)
     needToStop = False
     autoStartVM = False
 else:
-    print "Error: Found vm " + vm.name + " with state " + vm.state + ". Needs to be Running or Stopped."
+    message = "Found vm %s with state %s. Needs to be Running or Stopped." % (vm.name, vm.state)
+    c.print_message(message=message, message_type="Error", to_slack=False)
     sys.exit(1)
 
 # Volumes
@@ -268,10 +279,12 @@ currentStorageID = None
 # Get user data to e-mail
 adminData = c.getDomainAdminUserData(vm.domainid)
 if DRYRUN == 1:
-    print "Note: Not sending notification e-mails due to DRYRUN setting. Would have e-mailed " + adminData.email
+    message = "Not sending notification e-mails due to DRYRUN setting. Would have e-mailed %s " % adminData.email
+    c.print_message(message=message, message_type="Warning", to_slack=False)
 else:
     if not adminData.email:
-        print "Warning: Skipping mailing due to missing e-mail address."
+        message = "Skipping mailing due to missing e-mail address."
+        c.print_message(message=message, message_type="Warning", to_slack=False)
 
     templatefile = open(
         "email_template/migrateVirtualMachine_start.txt",
@@ -308,12 +321,14 @@ for vol in voldata:
         saved_storage_id = currentStorageID
 
     if saved_storage_id != currentStorageID:
-        print "Error: All attached volumes need to be on the same pool! (%s versus %s)" \
+        message = "All attached volumes need to be on the same pool! (%s versus %s)" \
               % (saved_storage_id, currentStorageID)
+        c.print_message(message=message, message_type="Error", to_slack=False)
         sys.exit(1)
 
     if currentStorageID == targetStorageID:
-        print "Warning: No need to migrate volume " + vol.name + " -- already on the desired storage pool. Skipping."
+        message = "No need to migrate volume %s -- already on the desired storage pool. Skipping." % vol.name
+        c.print_message(message=message, message_type="Note", to_slack=False)
         continue
 
 if currentStorageID is None:
@@ -334,7 +349,8 @@ if sodata is not None:
     storagetags = (sodata[0].tags) if sodata[0].tags is not None else ''
 
     if storagetags == '':
-        print "Note: Service offering has empty storage tags."
+        message = "Service offering has empty storage tags."
+        c.print_message(message=message, message_type="Note", to_slack=False)
 
     if storagetags != '' and storagepooltags != storagetags and c.FORCE == 0:
         if DEBUG == 1:
@@ -352,13 +368,17 @@ if sodata is not None:
 # Stop this vm if it was running
 if needToStop:
     if DRYRUN == 1:
-        print "Note: Would have stopped vm " + vm.name + " with id " + vm.id
+        message = "Would have stopped vm %s with id %s" % (vm.name, vm.id)
+        c.print_message(message=message, message_type="Note", to_slack=False)
     else:
-        print "Note: Stopping virtualmachine " + vm.name + " with id " + vm.id
+        message = "Stopping virtualmachine %s with id %s" % (vm.name, vm.id)
+        c.print_message(message=message, message_type="Note", to_slack=True)
         result = c.stopVirtualMachine(vm.id)
         if result == 1:
-            print "Stop vm failed -- exiting."
-            print "Error: investegate manually!"
+            message = "Stop vm failed -- exiting."
+            c.print_message(message=message, message_type="Error", to_slack=True)
+            message = "investigate manually!"
+            c.print_message(message=message, message_type="Note", to_slack=False)
 
             # Notify admin
             msgSubject = 'Warning: problem with maintenance for vm ' + \
@@ -372,8 +392,9 @@ if needToStop:
             c.print_message(message=message, message_type="Note", to_slack=True)
 
         else:
-            print "Error: " + result.virtualmachine.name + " is in state " + result.virtualmachine.state + \
-                  " instead of Stopped. VM need to be stopped to continue. Re-run script to try again -- exit."
+            message = "%s is in state %s instead of Stopped. VM need to be stopped to continue. " \
+                      "Re-run script to try again -- exit." % (result.virtualmachine.name, result.virtualmachine.state)
+            c.print_message(message=message, message_type="Error", to_slack=True)
 
             # Notify admin
             msgSubject = 'Warning: problem with maintenance for VM ' + \
@@ -395,53 +416,73 @@ if k.put_scripts(kvm_host) is False:
 # Get all volumes
 volumes_result = s.get_volumes_for_instance(instancename)
 for (name, path, uuid, vmstate, voltype) in volumes_result:
-    print "Note: Processing volume '%s', filename '%s', uuid '%s'" % (name, path, uuid)
+    message = "Processing volume '%s', filename '%s', uuid '%s'" % (name, path, uuid)
+    c.print_message(message=message, message_type="Note", to_slack=True)
 
     if DRYRUN == 1:
         print "Note: Would have extracted, downloaded, converted volume %s " % name
     else:
         if vmstate != "Stopped":
-            print "Error: Volume %s is attached to a VM state %s (should be Stopped). Halting." % (name, vmstate)
-            print "Note: Nothing has changed, you can either retry or start the VM on XenServer"
+            message = "Volume %s is attached to a VM state %s (should be Stopped). Halting." % (name, vmstate)
+            c.print_message(message=message, message_type="Error", to_slack=True)
+            message = "Nothing has changed, you can either retry or start the VM on XenServer"
+            c.print_message(message=message, message_type="Note", to_slack=False)
             sys.exit(1)
 
         # Transfer volume from XenServer to KVM
-        print "Note: Extracting volume %s" % name
+        message = "Note: Extracting volume %s" % name
+        c.print_message(message=message, message_type="Note", to_slack=False)
+
         url_to_download = x.extract_volume_wrapper(path, xenserver_host)
         if url_to_download is None:
-            print "Error: Transferring volume failed: did not get download url from API"
-            print "Error: Check volume_store_ref table, field url. It should contain a valid URL or NULL"
-            print "Note: Nothing has changed, you can either retry or start the VM on XenServer"
+            message = "Transferring volume failed: did not get download url from API"
+            c.print_message(message=message, message_type="Error", to_slack=True)
+            message = "Check volume_store_ref table, field url. It should contain a valid URL or NULL"
+            c.print_message(message=message, message_type="Note", to_slack=False)
+            message = "Nothing has changed, you can either retry or start the VM on XenServer"
+            c.print_message(message=message, message_type="Note", to_slack=False)
             sys.exit(1)
         if k.download_volume(kvm_host, url_to_download, path) is False:
-            print "Error: Downloading volume failed"
-            print "Note: Nothing has changed, you can either retry or start the VM on XenServer"
+            message = "Downloading volume %s failed" % path
+            c.print_message(message=message, message_type="Error", to_slack=True)
+            message = "Nothing has changed, you can either retry or start the VM on XenServer"
+            c.print_message(message=message, message_type="Note", to_slack=False)
             sys.exit(1)
-        print "Note: Downloading volume to KVM was successful"
+        message = "Downloading volume %s to KVM was successful" % path
+        c.print_message(message=message, message_type="Note", to_slack=False)
         kvmresult = False
         os_family = None
         if voltype == "DATADISK":
-            print "Note: %s is a disk of type %s so skipping virt-v2v and friends" % (name, voltype)
+            message = "%s is a disk of type %s so skipping virt-v2v and friends" % (name, voltype)
+            c.print_message(message=message, message_type="Note", to_slack=False)
             kvmresult = k.make_kvm_compatible(kvm_host, path, False, True)
         elif voltype == "ROOT":
-            print "Note: %s is a disk of type %s" % (name, voltype)
+            message = "%s is a disk of type %s" % (name, voltype)
+            c.print_message(message=message, message_type="Note", to_slack=False)
             kvmresult = k.make_kvm_compatible(kvm_host, path, doVirtvtov, True)
         else:
-            print "Error: Found volume %s with unknown type %s. Halting." % (name, voltype)
+            message = "Found volume %s with unknown type %s. Halting." % (name, voltype)
+            c.print_message(message=message, message_type="Error", to_slack=True)
             sys.exit(1)
 
         if kvmresult is False:
-            print "Error: Making volume KVM compatible failed"
-            print "Note: If using Linux, you could try using --skip-virt-v2v to skip the virt-v2v steps"
-            print "Note: Nothing has changed, you can either retry or start the VM on XenServer"
+            message = "Making volume %s KVM compatible failed" % path
+            c.print_message(message=message, message_type="Error", to_slack=True)
+            message = "If using Linux, you could try using --skip-virt-v2v to skip the virt-v2v steps"
+            c.print_message(message=message, message_type="Note", to_slack=False)
+            message = "Nothing has changed, you can either retry or start the VM on XenServer"
+            c.print_message(message=message, message_type="Note", to_slack=False)
             sys.exit(1)
-        print "Note: Converting volume to KVM was successful"
+        message = "Converting volume %s to KVM was successful" % path
+        c.print_message(message=message, message_type="Note", to_slack=True)
+
 
 # It might be a long time since the initial MySQL connection so we need to reconnect
 # Connect MySQL
 result = s.connectMySQL(mysqlHost, mysqlPasswd)
 if result > 0:
-    print "Error: MySQL connection failed"
+    message = "MySQL connection failed"
+    c.print_message(message=message, message_type="Error", to_slack=True)
     sys.exit(1)
 elif DEBUG == 1:
     print "DEBUG: MySQL connection successful"
@@ -450,22 +491,30 @@ elif DEBUG == 1:
 # Revery Query
 s.generate_revert_query(instancename)
 
-print "Note: Updating the database to activate the VM on KVM"
+message = "Updating the database to activate the VM on KVM"
+c.print_message(message=message, message_type="Note", to_slack=False)
+
 if not s.update_instance_to_kvm(instancename, newBaseTemplate, storagepoolname):
-    print "Error: Updating the database failed"
-    print "Note: Nothing has changed, you can either retry or start the VM on XenServer"
+    message = "Updating the database failed"
+    c.print_message(message=message, message_type="Error", to_slack=True)
+    message = "Nothing has changed, you can either retry or start the VM on XenServer"
+    c.print_message(message=message, message_type="Note", to_slack=False)
     sys.exit(1)
 
 # Start the VM again
 if autoStartVM:
     if DRYRUN == 1:
-        print "Would have started vm " + vm.name + " with id " + vm.id
+        message = "Would have started vm %s with id %s" % (vm.name, vm.id)
+        c.print_message(message=message, message_type="Note", to_slack=False)
     else:
-        print "Note: starting virtualmachine " + vm.name + " with id " + vm.id
+        message = "Starting virtualmachine %s with id %s" % (vm.name, vm.id)
+        c.print_message(message=message, message_type="Note", to_slack=True)
         result = c.startVirtualMachine(vm.id)
         if result == 1:
-            print "Start vm failed -- exiting."
-            print "Error: investegate manually!"
+            message = "Start vm failed -- exiting."
+            c.print_message(message=message, message_type="Error", to_slack=True)
+            message = "investegate manually!"
+            c.print_message(message=message, message_type="Note", to_slack=False)
 
             # Notify admin
             msgSubject = 'Warning: problem with maintenance for vm ' + \
@@ -475,7 +524,8 @@ if autoStartVM:
             sys.exit(1)
 
         if result.virtualmachine.state == "Running":
-            print "Note: " + result.virtualmachine.name + " is started successfully "
+            message = "%s is started successfully " % result.virtualmachine.name
+            c.print_message(message=message, message_type="Note", to_slack=True)
             # Get user data to e-mail
             adminData = c.getDomainAdminUserData(vm.domainid)
             if DRYRUN == 1:
@@ -484,7 +534,8 @@ if autoStartVM:
             else:
 
                 if not adminData.email:
-                    print "Warning: Skipping mailing due to missing e-mail address."
+                    message = "Skipping mailing due to missing e-mail address."
+                    c.print_message(message=message, message_type="Warning", to_slack=False)
 
                 templatefile = open(
                     "email_template/migrateVirtualMachine_done.txt",
@@ -537,15 +588,19 @@ if autoStartVM:
             c.sendMail(c.mail_from, c.errors_to, msgSubject, emailbody)
 
 else:
-    print "Warning: Not starting " + vm.name + " automatically!"
+    message = "Not starting %s automatically!" % vm.name
+    c.print_message(message=message, message_type="Warning", to_slack=False)
+
     # Get user data to e-mail
     adminData = c.getDomainAdminUserData(vm.domainid)
     if DRYRUN == 1:
-        print "Note: Not sending notification e-mails due to DRYRUN setting. Would have e-mailed " + adminData.email
+        message = "Not sending notification e-mails due to DRYRUN setting. Would have e-mailed %s" % adminData.email
+        c.print_message(message=message, message_type="Warning", to_slack=False)
     else:
 
         if not adminData.email:
-            print "Warning: Skipping mailing due to missing e-mail address."
+            message = "Skipping mailing due to missing e-mail address."
+            c.print_message(message=message, message_type="Warning", to_slack=False)
 
         # Tell the user how to start the VM manually
         cloudmonkeyCmd = "cloudmonkey start virtualmachine id=" + vm.id
