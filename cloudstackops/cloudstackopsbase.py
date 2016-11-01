@@ -61,8 +61,17 @@ class CloudStackOpsBase(object):
         self.configfile = os.getcwd() + '/config'
         self.pp = pprint.PrettyPrinter(depth=6)
         self.slack = None
-        slack_url = ""
 
+        self.printWelcome()
+        self.configure_slack()
+
+        signal.signal(signal.SIGINT, self.catch_ctrl_C)
+
+    def printWelcome(self):
+        pass
+
+    def configure_slack(self):
+        slack_url = ""
         try:
             self.configfile = os.getcwd() + '/config'
             config = ConfigParser.RawConfigParser()
@@ -70,16 +79,10 @@ class CloudStackOpsBase(object):
             slack_url = config.get('slack', 'hookurl')
 
         except:
-            print "Warning: No Slack integration found, so not using. See config."
+        print "Warning: No Slack integration found, so not using. See config file to setup."
 
         if len(slack_url) > 0:
             self.slack = slackweb.Slack(url=slack_url)
-        self.printWelcome()
-
-        signal.signal(signal.SIGINT, self.catch_ctrl_C)
-
-    def printWelcome(self):
-        pass
 
     # Handle unwanted CTRL+C presses
     def catch_ctrl_C(self, sig, frame):

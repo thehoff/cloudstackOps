@@ -80,7 +80,8 @@ class CloudStackOps(CloudStackOpsBase):
         self.xenserver = None
         self.kvm = None
         self.printWelcome()
-        self.checkScreenAlike()
+        self.configure_slack()
+        self.check_screen_alike()
 
         signal.signal(signal.SIGINT, self.catch_ctrl_C)
 
@@ -88,7 +89,7 @@ class CloudStackOps(CloudStackOpsBase):
         print colored.green("Welcome to CloudStackOps")
 
     # Check if we run in a screen session
-    def checkScreen(self):
+    def check_screen_sty(self):
         try:
             if len(os.environ['STY']) > 0:
                 if self.DEBUG == 1:
@@ -98,7 +99,7 @@ class CloudStackOps(CloudStackOpsBase):
             return False
 
     # Check if we run in a tmux session
-    def checkTmux(self):
+    def check_tmux(self):
         try:
             if len(os.environ['TMUX']) > 0:
                 if self.DEBUG == 1:
@@ -107,10 +108,22 @@ class CloudStackOps(CloudStackOpsBase):
         except:
             return False
 
-    def checkScreenAlike(self):
-        if self.checkScreen():
+    # Check if we run in a tmux session
+    def check_screen_term(self):
+        try:
+            if os.environ['TERM'] == "screen":
+                if self.DEBUG == 1:
+                    print "DEBUG: We're running in a screen-alike program."
+                return True
+        except:
+            return False
+
+    def check_screen_alike(self):
+        if self.check_screen_sty():
             return True
-        if self.checkTmux():
+        if self.check_tmux():
+            return True
+        if self.check_screen_term():
             return True
         print colored.red("Warning: You are NOT running inside screen/tmux. Please start a screen/tmux session to keep commands running in case you get disconnected!")
 
