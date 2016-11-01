@@ -98,7 +98,7 @@ class CloudStackOpsBase(object):
                 color = "danger"
             if message_type.lower() == "warning":
                 color = "warning"
-            self.send_slack_message(message, color, self.slack_custom_title, self.slack_custom_value)
+            self.send_slack_message(message, color)
 
     def send_slack_message(self, message, color="good"):
 
