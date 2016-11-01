@@ -590,7 +590,7 @@ if autoStartVM:
 
 else:
     message = "Not starting %s automatically!" % vm.name
-    c.print_message(message=message, message_type="Warning", to_slack=False)
+    c.print_message(message=message, message_type="Warning", to_slack=True)
 
     # Get user data to e-mail
     adminData = c.getDomainAdminUserData(vm.domainid)
