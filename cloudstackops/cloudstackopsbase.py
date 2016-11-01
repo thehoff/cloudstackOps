@@ -35,6 +35,7 @@ import random
 import commands
 from urlparse import urlparse
 from prettytable import PrettyTable
+import slackweb
 import pprint
 # Colored terminals
 try:
@@ -59,7 +60,20 @@ class CloudStackOpsBase(object):
         self.errors_to = ''
         self.configfile = os.getcwd() + '/config'
         self.pp = pprint.PrettyPrinter(depth=6)
+        self.slack = None
+        slack_url = ""
 
+        try:
+            self.configfile = os.getcwd() + '/config'
+            config = ConfigParser.RawConfigParser()
+            config.read(self.configfile)
+            slack_url = config.get('slack', 'hookurl')
+
+        except:
+            print "Warning: No Slack integration found, so not using. See config."
+
+        if len(slack_url) > 0:
+            self.slack = slackweb.Slack(url=slack_url)
         self.printWelcome()
 
         signal.signal(signal.SIGINT, self.catch_ctrl_C)
