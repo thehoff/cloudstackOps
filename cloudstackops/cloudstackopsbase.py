@@ -79,7 +79,7 @@ class CloudStackOpsBase(object):
             slack_url = config.get('slack', 'hookurl')
 
         except:
-        print "Warning: No Slack integration found, so not using. See config file to setup."
+            print "Warning: No Slack integration found, so not using. See config file to setup."
 
         if len(slack_url) > 0:
             self.slack = slackweb.Slack(url=slack_url)
