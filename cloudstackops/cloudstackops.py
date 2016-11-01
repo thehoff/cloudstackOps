@@ -83,7 +83,7 @@ class CloudStackOps(CloudStackOpsBase):
         self.slack_custom_title = "Undefined"
         self.slack_custom_value = "Undefined"
         self.cluster = "Undefined"
-        self.cloud = "Undefined"
+        self.instance_name = "Undefined"
         self.task = "Undefined"
 
         self.printWelcome()

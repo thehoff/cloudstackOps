@@ -64,7 +64,7 @@ class CloudStackOpsBase(object):
         self.slack_custom_title = "Undefined"
         self.slack_custom_value = "Undefined"
         self.cluster = "Undefined"
-        self.cloud = "Undefined"
+        self.instance_name = "Undefined"
         self.task = "Undefined"
 
         self.printWelcome()
@@ -120,8 +120,8 @@ class CloudStackOpsBase(object):
                 "short": "true"
             },
             {
-                "title": "Cloud",
-                "value": self.cloud,
+                "title": "Instance ID",
+                "value": self.instance_name,
                 "short": "true"
             }
         ]}

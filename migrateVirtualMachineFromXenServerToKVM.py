@@ -153,6 +153,7 @@ if DRYRUN == 1:
 # Init CloudStackOps class
 c = cloudstackops.CloudStackOps(DEBUG, DRYRUN)
 c.task = "XenServer -> KVM migration"
+c.instance_name = instancename
 
 # Init XenServer class
 x = xenserver.xenserver('root', threads)
