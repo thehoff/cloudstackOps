@@ -436,6 +436,16 @@ for (name, path, uuid, vmstate, voltype) in volumes_result:
             sys.exit(1)
         print "Note: Converting volume to KVM was successful"
 
+# It might be a long time since the initial MySQL connection so we need to reconnect
+# Connect MySQL
+result = s.connectMySQL(mysqlHost, mysqlPasswd)
+if result > 0:
+    print "Error: MySQL connection failed"
+    sys.exit(1)
+elif DEBUG == 1:
+    print "DEBUG: MySQL connection successful"
+    print s.conn
+
 # Revery Query
 s.generate_revert_query(instancename)
 
