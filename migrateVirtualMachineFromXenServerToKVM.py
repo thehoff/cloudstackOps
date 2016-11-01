@@ -324,7 +324,7 @@ currentStorageData = c.getStoragePoolData(currentStorageID)[0]
 xenserver_host = c.getFirstHostFromCluster(currentStorageData.clusterid)
 
 c.slack_custom_title = "Migration details"
-c.slack_custom_value = "From %s to %s" % (xenserver_host, kvm_host)
+c.slack_custom_value = "From %s to %s" % (xenserver_host.name, kvm_host.name)
 
 # Figure out the tags
 sodata = c.listServiceOfferings({'serviceofferingid': vm.serviceofferingid})
