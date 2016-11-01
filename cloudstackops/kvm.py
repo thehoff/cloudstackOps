@@ -188,7 +188,7 @@ class Kvm(hypervisor.hypervisor):
             with settings(host_string=self.ssh_user + "@" + kvmhost.ipaddress):
                 command = """
                 cd %s; sudo virt-win-reg %s-sda 'HKLM\SYSTEM\Controlset002\Services\TCPIP\Parameters\interfaces' |egrep "^\"NameServer" | perl -MEncode -pe's?hex\((\d+)\):(\S+)?$t=$1;$_=$2;s,\,,,g;"str($t):\"".decode(utf16le=>pack("H*",$_))."\""?eg' | sed 's/.*\:\"\(.*\)\"/\1/g | sudo tee dns.cfg'
-                """ % % (self.get_migration_path(), volume_uuid)
+                """ % (self.get_migration_path(), volume_uuid)
                 return fab.run(command)
         except:
             return False
