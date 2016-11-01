@@ -154,6 +154,7 @@ if DRYRUN == 1:
 c = cloudstackops.CloudStackOps(DEBUG, DRYRUN)
 c.task = "XenServer -> KVM migration"
 c.instance_name = instancename
+c.slack_custom_title = "Migration details"
 
 # Init XenServer class
 x = xenserver.xenserver('root', threads)
@@ -339,7 +340,6 @@ if currentStorageID is None:
 currentStorageData = c.getStoragePoolData(currentStorageID)[0]
 xenserver_host = c.getFirstHostFromCluster(currentStorageData.clusterid)
 
-c.slack_custom_title = "Migration details"
 c.slack_custom_value = "From %s to %s" % (xenserver_host.name, kvm_host.name.split(".")[0])
 
 # Figure out the tags
