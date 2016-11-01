@@ -250,6 +250,7 @@ if vmdata is None:
     sys.exit(1)
 
 vm = vmdata[0]
+c.slack_custom_title = "Migration details for %s" % vm.domain
 
 if vm.hypervisor == "KVM":
     message = "VM %s aka '%s' is already happily running on KVM!" % (vm.instancename, vm.name)
