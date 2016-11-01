@@ -61,6 +61,11 @@ class CloudStackOpsBase(object):
         self.configfile = os.getcwd() + '/config'
         self.pp = pprint.PrettyPrinter(depth=6)
         self.slack = None
+        self.slack_custom_title = "Undefined"
+        self.slack_custom_value = "Undefined"
+        self.cluster = "Undefined"
+        self.cloud = "Undefined"
+        self.task = "Undefined"
 
         self.printWelcome()
         self.configure_slack()
@@ -84,9 +89,49 @@ class CloudStackOpsBase(object):
         if len(slack_url) > 0:
             self.slack = slackweb.Slack(url=slack_url)
 
+    def print_message(self, message, message_type="Note", to_slack=False):
+        print "%s: %s" % (message_type.title(), message)
+
+        if to_slack:
+            color = "good"
+            if message_type.lower() == "error":
+                color = "danger"
+            if message_type.lower() == "warning":
+                color = "warning"
+            self.send_slack_message(message, color, slack_custom_title, slack_custom_value)
+
+    def send_slack_message(self, message, color="good"):
+
+        attachments = []
+        attachment = {"text": message, "color": color, "fields": [
+            {
+                "title": str(self.slack_custom_title),
+                "value": str(self.slack_custom_value),
+                "short": "true"
+            },
+            {
+                "title": "Task",
+                "value": self.task,
+                "short": "true"
+            },
+            {
+                "title": "Cluster",
+                "value": self.cluster,
+                "short": "true"
+            },
+            {
+                "title": "Cloud",
+                "value": self.cloud,
+                "short": "true"
+            }
+        ]}
+
+        attachments.append(attachment)
+        self.slack.notify(attachments=attachments, icon_emoji=":robot_face:", username="cloudstackOps")
+
     # Handle unwanted CTRL+C presses
     def catch_ctrl_C(self, sig, frame):
-        print "Warning: do not interupt! If you really want to quit, use kill -9."
+        print "Warning: do not interrupt! If you really want to quit, use kill -9."
 
     # Read config files
     def readConfigFile(self):

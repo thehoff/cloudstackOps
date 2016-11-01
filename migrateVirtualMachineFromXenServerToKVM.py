@@ -152,6 +152,7 @@ if DRYRUN == 1:
 
 # Init CloudStackOps class
 c = cloudstackops.CloudStackOps(DEBUG, DRYRUN)
+c.task = "XenServer -> KVM migration"
 
 # Init XenServer class
 x = xenserver.xenserver('root', threads)
@@ -205,6 +206,7 @@ toClusterID = c.checkCloudStackName(
     {'csname': toCluster, 'csApiCall': 'listClusters'})
 
 print "Note: Cluster ID found for %s is %s" % (toCluster, toClusterID)
+c.cluster = toCluster
 
 templateID = c.checkCloudStackName(
     {'csname': newBaseTemplate, 'csApiCall': 'listTemplates'})
@@ -321,6 +323,9 @@ if currentStorageID is None:
 currentStorageData = c.getStoragePoolData(currentStorageID)[0]
 xenserver_host = c.getFirstHostFromCluster(currentStorageData.clusterid)
 
+c.slack_custom_title = "Migration details"
+c.slack_custom_value = "From %s to %s" % (xenserver_host, kvm_host)
+
 # Figure out the tags
 sodata = c.listServiceOfferings({'serviceofferingid': vm.serviceofferingid})
 if sodata is not None:
@@ -362,7 +367,9 @@ if needToStop:
             sys.exit(1)
 
         if result.virtualmachine.state == "Stopped":
-            print "Note: " + result.virtualmachine.name + " is stopped successfully "
+            message = "%s is stopped successfully, starting migration" % result.virtualmachine.name
+            c.print_message(message=message, message_type="Note", to_slack=True)
+
         else:
             print "Error: " + result.virtualmachine.name + " is in state " + result.virtualmachine.state + \
                   " instead of Stopped. VM need to be stopped to continue. Re-run script to try again -- exit."
