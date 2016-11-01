@@ -525,7 +525,7 @@ if autoStartVM:
             sys.exit(1)
 
         if result.virtualmachine.state == "Running":
-            message = "%s is started successfully " % result.virtualmachine.name
+            message = "%s is started successfully on KVM" % result.virtualmachine.name
             c.print_message(message=message, message_type="Note", to_slack=True)
             # Get user data to e-mail
             adminData = c.getDomainAdminUserData(vm.domainid)
