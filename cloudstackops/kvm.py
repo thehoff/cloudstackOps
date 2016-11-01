@@ -138,7 +138,11 @@ class Kvm(hypervisor.hypervisor):
                 if registryresult is False:
                     print "Error: Altering the registry failed."
                     return False
-            result = self.move_rootdisk_to_pool(kvmhost, path)
+                result = self.get_previous_windows_dns(kvmhost, path)
+                if result is False:
+                    print "Error: Could not get DNS servers from Windows on volume %s on host %s" % (path, kvmhost.name)
+                    return False
+                result = self.move_rootdisk_to_pool(kvmhost, path)
             if result is False:
                 print "Error: Could not move rootvolume %s to the storage pool on host %s" % (path, kvmhost.name)
                 return False
@@ -174,6 +178,17 @@ class Kvm(hypervisor.hypervisor):
         try:
             with settings(host_string=self.ssh_user + "@" + kvmhost.ipaddress):
                 command = "cd %s; sudo virt-v2v -i disk %s -o local -os ./" % (self.get_migration_path(), volume_uuid)
+                return fab.run(command)
+        except:
+            return False
+
+    def get_previous_windows_dns(self, kvmhost, volume_uuid):
+        print "Note: Getting previous Windows DNS servers from disk %s on host %s" % (volume_uuid, kvmhost.name)
+        try:
+            with settings(host_string=self.ssh_user + "@" + kvmhost.ipaddress):
+                command = """
+                cd %s; sudo virt-win-reg %s-sda 'HKLM\SYSTEM\Controlset002\Services\TCPIP\Parameters\interfaces' |egrep "^\"NameServer" | perl -MEncode -pe's?hex\((\d+)\):(\S+)?$t=$1;$_=$2;s,\,,,g;"str($t):\"".decode(utf16le=>pack("H*",$_))."\""?eg' | sed 's/.*\:\"\(.*\)\"/\1/g | sudo tee dns.cfg'
+                """ % % (self.get_migration_path(), volume_uuid)
                 return fab.run(command)
         except:
             return False
