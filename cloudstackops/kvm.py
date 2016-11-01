@@ -129,10 +129,6 @@ class Kvm(hypervisor.hypervisor):
             if result is False:
                 print "Error: Could not inject drivers on volume %s on host %s" % (path, kvmhost.name)
                 return False
-            result = self.modify_os_files(kvmhost, path)
-            if result is False:
-                print "Error: Could not modify disk %s on host %s" % (path, kvmhost.name)
-                return False
             if self.get_os_family(kvmhost, path) == "windows":
                 registryresult = self.fix_windows_registry(kvmhost, path)
                 if registryresult is False:
@@ -142,6 +138,10 @@ class Kvm(hypervisor.hypervisor):
                 if result is False:
                     print "Error: Could not get DNS servers from Windows on volume %s on host %s" % (path, kvmhost.name)
                     return False
+            result = self.modify_os_files(kvmhost, path)
+            if result is False:
+                print "Error: Could not modify disk %s on host %s" % (path, kvmhost.name)
+                return False
             result = self.move_rootdisk_to_pool(kvmhost, path)
             if result is False:
                 print "Error: Could not move rootvolume %s to the storage pool on host %s" % (path, kvmhost.name)
