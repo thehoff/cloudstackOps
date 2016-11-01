@@ -79,6 +79,13 @@ class CloudStackOps(CloudStackOpsBase):
         self.ssh = None
         self.xenserver = None
         self.kvm = None
+        self.slack = None
+        self.slack_custom_title = "Undefined"
+        self.slack_custom_value = "Undefined"
+        self.cluster = "Undefined"
+        self.cloud = "Undefined"
+        self.task = "Undefined"
+
         self.printWelcome()
         self.configure_slack()
         self.check_screen_alike()
