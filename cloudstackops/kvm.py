@@ -142,7 +142,7 @@ class Kvm(hypervisor.hypervisor):
                 if result is False:
                     print "Error: Could not get DNS servers from Windows on volume %s on host %s" % (path, kvmhost.name)
                     return False
-                result = self.move_rootdisk_to_pool(kvmhost, path)
+            result = self.move_rootdisk_to_pool(kvmhost, path)
             if result is False:
                 print "Error: Could not move rootvolume %s to the storage pool on host %s" % (path, kvmhost.name)
                 return False
