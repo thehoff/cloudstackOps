@@ -164,7 +164,7 @@ class Kvm(hypervisor.hypervisor):
         print "Note: Fixing virtual versus physical disksize %s on host %s" % (volume_uuid, kvmhost.name)
         try:
             with settings(host_string=self.ssh_user + "@" + kvmhost.ipaddress):
-                command = "cd %s; sudo qemu-img resize %s +500KB" % (self.get_migration_path(), volume_uuid)
+                command = "cd %s; sudo qemu-img resize %s +1MB" % (self.get_migration_path(), volume_uuid)
                 return fab.run(command)
         except:
             return False
